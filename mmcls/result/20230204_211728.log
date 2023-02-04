@@ -1,0 +1,538 @@
+2023-02-04 21:17:28,634 - mmcls - INFO - Environment info:
+------------------------------------------------------------
+sys.platform: linux
+Python: 3.8.13 (default, Mar 28 2022, 11:38:47) [GCC 7.5.0]
+CUDA available: True
+GPU 0: NVIDIA GeForce RTX 2080 Ti
+CUDA_HOME: /share12/home/zhenni/anaconda3/envs/mmlab1
+NVCC: Cuda compilation tools, release 11.7, V11.7.99
+GCC: gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0
+PyTorch: 1.13.1
+PyTorch compiling details: PyTorch built with:
+  - GCC 9.3
+  - C++ Version: 201402
+  - Intel(R) oneAPI Math Kernel Library Version 2021.4-Product Build 20210904 for Intel(R) 64 architecture applications
+  - Intel(R) MKL-DNN v2.6.0 (Git Hash 52b5f107dd9cf10910aaa19cb47f3abf9b349815)
+  - OpenMP 201511 (a.k.a. OpenMP 4.5)
+  - LAPACK is enabled (usually provided by MKL)
+  - NNPACK is enabled
+  - CPU capability usage: AVX2
+  - CUDA Runtime 11.7
+  - NVCC architecture flags: -gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_60,code=sm_60;-gencode;arch=compute_61,code=sm_61;-gencode;arch=compute_70,code=sm_70;-gencode;arch=compute_75,code=sm_75;-gencode;arch=compute_80,code=sm_80;-gencode;arch=compute_86,code=sm_86;-gencode;arch=compute_37,code=compute_37
+  - CuDNN 8.5
+  - Magma 2.6.1
+  - Build settings: BLAS_INFO=mkl, BUILD_TYPE=Release, CUDA_VERSION=11.7, CUDNN_VERSION=8.5.0, CXX_COMPILER=/opt/rh/devtoolset-9/root/usr/bin/c++, CXX_FLAGS= -fabi-version=11 -Wno-deprecated -fvisibility-inlines-hidden -DUSE_PTHREADPOOL -fopenmp -DNDEBUG -DUSE_KINETO -DUSE_FBGEMM -DUSE_QNNPACK -DUSE_PYTORCH_QNNPACK -DUSE_XNNPACK -DSYMBOLICATE_MOBILE_DEBUG_HANDLE -DEDGE_PROFILER_USE_KINETO -O2 -fPIC -Wno-narrowing -Wall -Wextra -Werror=return-type -Werror=non-virtual-dtor -Wno-missing-field-initializers -Wno-type-limits -Wno-array-bounds -Wno-unknown-pragmas -Wunused-local-typedefs -Wno-unused-parameter -Wno-unused-function -Wno-unused-result -Wno-strict-overflow -Wno-strict-aliasing -Wno-error=deprecated-declarations -Wno-stringop-overflow -Wno-psabi -Wno-error=pedantic -Wno-error=redundant-decls -Wno-error=old-style-cast -fdiagnostics-color=always -faligned-new -Wno-unused-but-set-variable -Wno-maybe-uninitialized -fno-math-errno -fno-trapping-math -Werror=format -Werror=cast-function-type -Wno-stringop-overflow, LAPACK_INFO=mkl, PERF_WITH_AVX=1, PERF_WITH_AVX2=1, PERF_WITH_AVX512=1, TORCH_VERSION=1.13.1, USE_CUDA=ON, USE_CUDNN=ON, USE_EXCEPTION_PTR=1, USE_GFLAGS=OFF, USE_GLOG=OFF, USE_MKL=ON, USE_MKLDNN=ON, USE_MPI=OFF, USE_NCCL=ON, USE_NNPACK=ON, USE_OPENMP=ON, USE_ROCM=OFF, 
+
+TorchVision: 0.14.1
+OpenCV: 4.7.0
+MMCV: 1.7.1
+MMCV Compiler: GCC 9.3
+MMCV CUDA Compiler: 11.7
+MMClassification: 0.25.0+
+------------------------------------------------------------
+
+2023-02-04 21:17:28,634 - mmcls - INFO - Distributed training: False
+2023-02-04 21:17:28,710 - mmcls - INFO - Config:
+model = dict(
+    type='ImageClassifier',
+    backbone=dict(
+        type='ResNet',
+        depth=18,
+        num_stages=4,
+        out_indices=(3, ),
+        style='pytorch'),
+    neck=dict(type='GlobalAveragePooling'),
+    head=dict(
+        type='LinearClsHead',
+        num_classes=5,
+        in_channels=512,
+        loss=dict(type='CrossEntropyLoss', loss_weight=1.0),
+        topk=(1, )))
+data = dict(
+    samples_per_gpu=32,
+    workers_per_gpu=2,
+    train=dict(
+        type='CustomDataset',
+        data_prefix='data/train',
+        ann_file='data/train.txt',
+        classes='data/classes.txt',
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(type='RandomResizedCrop', size=224),
+            dict(type='RandomFlip', flip_prob=0.5, direction='horizontal'),
+            dict(
+                type='Normalize',
+                mean=[123.675, 116.28, 103.53],
+                std=[58.395, 57.12, 57.375],
+                to_rgb=True),
+            dict(type='ImageToTensor', keys=['img']),
+            dict(type='ToTensor', keys=['gt_label']),
+            dict(type='Collect', keys=['img', 'gt_label'])
+        ]),
+    val=dict(
+        type='CustomDataset',
+        data_prefix='data/val',
+        ann_file='data/val.txt',
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(type='Resize', size=(256, -1)),
+            dict(type='CenterCrop', crop_size=224),
+            dict(
+                type='Normalize',
+                mean=[123.675, 116.28, 103.53],
+                std=[58.395, 57.12, 57.375],
+                to_rgb=True),
+            dict(type='ImageToTensor', keys=['img']),
+            dict(type='Collect', keys=['img'])
+        ]))
+evaluation = dict(
+    interval=1, metric='accuracy', metric_options=dict(topk=(1, )))
+optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
+optimizer_config = dict(grad_clip=None)
+lr_config = dict(policy='step', step=[1])
+runner = dict(type='EpochBasedRunner', max_epochs=10)
+checkpoint_config = dict(interval=1)
+log_config = dict(interval=2, hooks=[dict(type='TextLoggerHook')])
+dist_params = dict(backend='nccl')
+log_level = 'INFO'
+load_from = 'ckpt/resnet18_8xb32_in1k_20210831-fbbb1da6.pth'
+resume_from = None
+workflow = [('train', 1)]
+work_dir = 'result'
+gpu_ids = range(0, 1)
+
+2023-02-04 21:17:28,711 - mmcls - INFO - Set random seed to 488921606, deterministic: False
+2023-02-04 21:17:32,792 - mmcls - INFO - load checkpoint from local path: ckpt/resnet18_8xb32_in1k_20210831-fbbb1da6.pth
+2023-02-04 21:17:33,165 - mmcls - WARNING - The model and loaded state dict do not match exactly
+
+size mismatch for head.fc.weight: copying a param with shape torch.Size([1000, 512]) from checkpoint, the shape in current model is torch.Size([5, 512]).
+size mismatch for head.fc.bias: copying a param with shape torch.Size([1000]) from checkpoint, the shape in current model is torch.Size([5]).
+2023-02-04 21:17:33,166 - mmcls - INFO - Start running, host: zhenni@server-01, work_dir: /share12/home/zhenni/PythonProject/openmmlab-camp/mmcls/result
+2023-02-04 21:17:33,166 - mmcls - INFO - Hooks will be executed in the following order:
+before_run:
+(VERY_HIGH   ) StepLrUpdaterHook                  
+(NORMAL      ) CheckpointHook                     
+(LOW         ) EvalHook                           
+(VERY_LOW    ) TextLoggerHook                     
+ -------------------- 
+before_train_epoch:
+(VERY_HIGH   ) StepLrUpdaterHook                  
+(LOW         ) IterTimerHook                      
+(LOW         ) EvalHook                           
+(VERY_LOW    ) TextLoggerHook                     
+ -------------------- 
+before_train_iter:
+(VERY_HIGH   ) StepLrUpdaterHook                  
+(LOW         ) IterTimerHook                      
+(LOW         ) EvalHook                           
+ -------------------- 
+after_train_iter:
+(ABOVE_NORMAL) OptimizerHook                      
+(NORMAL      ) CheckpointHook                     
+(LOW         ) IterTimerHook                      
+(LOW         ) EvalHook                           
+(VERY_LOW    ) TextLoggerHook                     
+ -------------------- 
+after_train_epoch:
+(NORMAL      ) CheckpointHook                     
+(LOW         ) EvalHook                           
+(VERY_LOW    ) TextLoggerHook                     
+ -------------------- 
+before_val_epoch:
+(LOW         ) IterTimerHook                      
+(VERY_LOW    ) TextLoggerHook                     
+ -------------------- 
+before_val_iter:
+(LOW         ) IterTimerHook                      
+ -------------------- 
+after_val_iter:
+(LOW         ) IterTimerHook                      
+ -------------------- 
+after_val_epoch:
+(VERY_LOW    ) TextLoggerHook                     
+ -------------------- 
+after_run:
+(VERY_LOW    ) TextLoggerHook                     
+ -------------------- 
+2023-02-04 21:17:33,167 - mmcls - INFO - workflow: [('train', 1)], max: 10 epochs
+2023-02-04 21:17:33,167 - mmcls - INFO - Checkpoints will be saved to /share12/home/zhenni/PythonProject/openmmlab-camp/mmcls/result by HardDiskBackend.
+2023-02-04 21:17:42,507 - mmcls - INFO - Epoch [1][2/72]	lr: 1.000e-03, eta: 0:55:35, time: 4.646, data_time: 1.171, memory: 874, loss: 1.6198
+2023-02-04 21:17:42,659 - mmcls - INFO - Epoch [1][4/72]	lr: 1.000e-03, eta: 0:28:15, time: 0.091, data_time: 0.041, memory: 874, loss: 1.6268
+2023-02-04 21:17:42,801 - mmcls - INFO - Epoch [1][6/72]	lr: 1.000e-03, eta: 0:19:03, time: 0.068, data_time: 0.010, memory: 874, loss: 1.5818
+2023-02-04 21:17:42,927 - mmcls - INFO - Epoch [1][8/72]	lr: 1.000e-03, eta: 0:14:26, time: 0.064, data_time: 0.012, memory: 874, loss: 1.5035
+2023-02-04 21:17:43,044 - mmcls - INFO - Epoch [1][10/72]	lr: 1.000e-03, eta: 0:11:39, time: 0.057, data_time: 0.011, memory: 874, loss: 1.4328
+2023-02-04 21:17:43,159 - mmcls - INFO - Epoch [1][12/72]	lr: 1.000e-03, eta: 0:09:48, time: 0.061, data_time: 0.013, memory: 874, loss: 1.3283
+2023-02-04 21:17:43,284 - mmcls - INFO - Epoch [1][14/72]	lr: 1.000e-03, eta: 0:08:28, time: 0.058, data_time: 0.021, memory: 874, loss: 1.2781
+2023-02-04 21:17:43,417 - mmcls - INFO - Epoch [1][16/72]	lr: 1.000e-03, eta: 0:07:29, time: 0.067, data_time: 0.033, memory: 874, loss: 1.2629
+2023-02-04 21:17:43,575 - mmcls - INFO - Epoch [1][18/72]	lr: 1.000e-03, eta: 0:06:44, time: 0.080, data_time: 0.046, memory: 874, loss: 1.2153
+2023-02-04 21:17:43,720 - mmcls - INFO - Epoch [1][20/72]	lr: 1.000e-03, eta: 0:06:08, time: 0.072, data_time: 0.032, memory: 874, loss: 1.0973
+2023-02-04 21:17:43,847 - mmcls - INFO - Epoch [1][22/72]	lr: 1.000e-03, eta: 0:05:38, time: 0.070, data_time: 0.031, memory: 874, loss: 1.0599
+2023-02-04 21:17:43,981 - mmcls - INFO - Epoch [1][24/72]	lr: 1.000e-03, eta: 0:05:13, time: 0.064, data_time: 0.033, memory: 874, loss: 1.0282
+2023-02-04 21:17:44,192 - mmcls - INFO - Epoch [1][26/72]	lr: 1.000e-03, eta: 0:04:53, time: 0.107, data_time: 0.066, memory: 874, loss: 0.9306
+2023-02-04 21:17:44,359 - mmcls - INFO - Epoch [1][28/72]	lr: 1.000e-03, eta: 0:04:35, time: 0.078, data_time: 0.046, memory: 874, loss: 0.8241
+2023-02-04 21:17:44,509 - mmcls - INFO - Epoch [1][30/72]	lr: 1.000e-03, eta: 0:04:19, time: 0.063, data_time: 0.029, memory: 874, loss: 0.8620
+2023-02-04 21:17:44,649 - mmcls - INFO - Epoch [1][32/72]	lr: 1.000e-03, eta: 0:04:06, time: 0.079, data_time: 0.029, memory: 874, loss: 0.7293
+2023-02-04 21:17:44,756 - mmcls - INFO - Epoch [1][34/72]	lr: 1.000e-03, eta: 0:03:53, time: 0.065, data_time: 0.016, memory: 874, loss: 0.6693
+2023-02-04 21:17:44,874 - mmcls - INFO - Epoch [1][36/72]	lr: 1.000e-03, eta: 0:03:41, time: 0.049, data_time: 0.004, memory: 874, loss: 0.7317
+2023-02-04 21:17:44,992 - mmcls - INFO - Epoch [1][38/72]	lr: 1.000e-03, eta: 0:03:31, time: 0.062, data_time: 0.015, memory: 874, loss: 0.7407
+2023-02-04 21:17:45,106 - mmcls - INFO - Epoch [1][40/72]	lr: 1.000e-03, eta: 0:03:22, time: 0.055, data_time: 0.011, memory: 874, loss: 0.6523
+2023-02-04 21:17:45,232 - mmcls - INFO - Epoch [1][42/72]	lr: 1.000e-03, eta: 0:03:14, time: 0.065, data_time: 0.013, memory: 874, loss: 0.5552
+2023-02-04 21:17:45,376 - mmcls - INFO - Epoch [1][44/72]	lr: 1.000e-03, eta: 0:03:07, time: 0.072, data_time: 0.011, memory: 874, loss: 0.5687
+2023-02-04 21:17:45,517 - mmcls - INFO - Epoch [1][46/72]	lr: 1.000e-03, eta: 0:03:00, time: 0.069, data_time: 0.013, memory: 874, loss: 0.5109
+2023-02-04 21:17:45,644 - mmcls - INFO - Epoch [1][48/72]	lr: 1.000e-03, eta: 0:02:54, time: 0.061, data_time: 0.013, memory: 874, loss: 0.5953
+2023-02-04 21:17:45,769 - mmcls - INFO - Epoch [1][50/72]	lr: 1.000e-03, eta: 0:02:48, time: 0.062, data_time: 0.015, memory: 874, loss: 0.6098
+2023-02-04 21:17:45,897 - mmcls - INFO - Epoch [1][52/72]	lr: 1.000e-03, eta: 0:02:43, time: 0.067, data_time: 0.014, memory: 874, loss: 0.5694
+2023-02-04 21:17:46,027 - mmcls - INFO - Epoch [1][54/72]	lr: 1.000e-03, eta: 0:02:38, time: 0.065, data_time: 0.013, memory: 874, loss: 0.5644
+2023-02-04 21:17:46,152 - mmcls - INFO - Epoch [1][56/72]	lr: 1.000e-03, eta: 0:02:33, time: 0.060, data_time: 0.012, memory: 874, loss: 0.5135
+2023-02-04 21:17:46,272 - mmcls - INFO - Epoch [1][58/72]	lr: 1.000e-03, eta: 0:02:29, time: 0.062, data_time: 0.016, memory: 874, loss: 0.6307
+2023-02-04 21:17:46,388 - mmcls - INFO - Epoch [1][60/72]	lr: 1.000e-03, eta: 0:02:25, time: 0.062, data_time: 0.013, memory: 874, loss: 0.4888
+2023-02-04 21:17:46,486 - mmcls - INFO - Epoch [1][62/72]	lr: 1.000e-03, eta: 0:02:21, time: 0.047, data_time: 0.008, memory: 874, loss: 0.5994
+2023-02-04 21:17:46,586 - mmcls - INFO - Epoch [1][64/72]	lr: 1.000e-03, eta: 0:02:17, time: 0.049, data_time: 0.013, memory: 874, loss: 0.4584
+2023-02-04 21:17:46,771 - mmcls - INFO - Epoch [1][66/72]	lr: 1.000e-03, eta: 0:02:14, time: 0.095, data_time: 0.050, memory: 874, loss: 0.4032
+2023-02-04 21:17:46,957 - mmcls - INFO - Epoch [1][68/72]	lr: 1.000e-03, eta: 0:02:11, time: 0.088, data_time: 0.055, memory: 874, loss: 0.5365
+2023-02-04 21:17:47,094 - mmcls - INFO - Epoch [1][70/72]	lr: 1.000e-03, eta: 0:02:09, time: 0.066, data_time: 0.028, memory: 874, loss: 0.5258
+2023-02-04 21:17:47,267 - mmcls - INFO - Epoch [1][72/72]	lr: 1.000e-03, eta: 0:02:06, time: 0.102, data_time: 0.016, memory: 874, loss: 0.2268
+2023-02-04 21:17:47,268 - mmcls - INFO - Saving checkpoint at 1 epochs
+2023-02-04 21:17:49,499 - mmcls - INFO - Epoch(val) [1][18]	accuracy_top-1: 92.8322
+2023-02-04 21:17:51,814 - mmcls - INFO - Epoch [2][2/72]	lr: 1.000e-04, eta: 0:02:23, time: 1.152, data_time: 1.099, memory: 874, loss: 0.3379
+2023-02-04 21:17:51,933 - mmcls - INFO - Epoch [2][4/72]	lr: 1.000e-04, eta: 0:02:19, time: 0.051, data_time: 0.010, memory: 874, loss: 0.2581
+2023-02-04 21:17:52,149 - mmcls - INFO - Epoch [2][6/72]	lr: 1.000e-04, eta: 0:02:17, time: 0.106, data_time: 0.058, memory: 874, loss: 0.3711
+2023-02-04 21:17:52,281 - mmcls - INFO - Epoch [2][8/72]	lr: 1.000e-04, eta: 0:02:14, time: 0.065, data_time: 0.015, memory: 874, loss: 0.4420
+2023-02-04 21:17:52,462 - mmcls - INFO - Epoch [2][10/72]	lr: 1.000e-04, eta: 0:02:12, time: 0.091, data_time: 0.047, memory: 874, loss: 0.4121
+2023-02-04 21:17:52,629 - mmcls - INFO - Epoch [2][12/72]	lr: 1.000e-04, eta: 0:02:10, time: 0.084, data_time: 0.044, memory: 874, loss: 0.3640
+2023-02-04 21:17:52,757 - mmcls - INFO - Epoch [2][14/72]	lr: 1.000e-04, eta: 0:02:07, time: 0.067, data_time: 0.014, memory: 874, loss: 0.3860
+2023-02-04 21:17:52,878 - mmcls - INFO - Epoch [2][16/72]	lr: 1.000e-04, eta: 0:02:05, time: 0.058, data_time: 0.011, memory: 874, loss: 0.4209
+2023-02-04 21:17:52,999 - mmcls - INFO - Epoch [2][18/72]	lr: 1.000e-04, eta: 0:02:02, time: 0.060, data_time: 0.013, memory: 874, loss: 0.4659
+2023-02-04 21:17:53,125 - mmcls - INFO - Epoch [2][20/72]	lr: 1.000e-04, eta: 0:02:00, time: 0.072, data_time: 0.016, memory: 874, loss: 0.3307
+2023-02-04 21:17:53,285 - mmcls - INFO - Epoch [2][22/72]	lr: 1.000e-04, eta: 0:01:59, time: 0.082, data_time: 0.015, memory: 874, loss: 0.4358
+2023-02-04 21:17:53,415 - mmcls - INFO - Epoch [2][24/72]	lr: 1.000e-04, eta: 0:01:56, time: 0.058, data_time: 0.004, memory: 874, loss: 0.3393
+2023-02-04 21:17:53,546 - mmcls - INFO - Epoch [2][26/72]	lr: 1.000e-04, eta: 0:01:55, time: 0.069, data_time: 0.010, memory: 874, loss: 0.3909
+2023-02-04 21:17:53,661 - mmcls - INFO - Epoch [2][28/72]	lr: 1.000e-04, eta: 0:01:53, time: 0.052, data_time: 0.006, memory: 874, loss: 0.2455
+2023-02-04 21:17:53,777 - mmcls - INFO - Epoch [2][30/72]	lr: 1.000e-04, eta: 0:01:51, time: 0.064, data_time: 0.012, memory: 874, loss: 0.3650
+2023-02-04 21:17:53,961 - mmcls - INFO - Epoch [2][32/72]	lr: 1.000e-04, eta: 0:01:49, time: 0.091, data_time: 0.016, memory: 874, loss: 0.3026
+2023-02-04 21:17:54,111 - mmcls - INFO - Epoch [2][34/72]	lr: 1.000e-04, eta: 0:01:48, time: 0.070, data_time: 0.007, memory: 874, loss: 0.4704
+2023-02-04 21:17:54,224 - mmcls - INFO - Epoch [2][36/72]	lr: 1.000e-04, eta: 0:01:46, time: 0.059, data_time: 0.011, memory: 874, loss: 0.4668
+2023-02-04 21:17:54,326 - mmcls - INFO - Epoch [2][38/72]	lr: 1.000e-04, eta: 0:01:44, time: 0.049, data_time: 0.009, memory: 874, loss: 0.3681
+2023-02-04 21:17:54,612 - mmcls - INFO - Epoch [2][40/72]	lr: 1.000e-04, eta: 0:01:44, time: 0.143, data_time: 0.013, memory: 874, loss: 0.3789
+2023-02-04 21:17:54,745 - mmcls - INFO - Epoch [2][42/72]	lr: 1.000e-04, eta: 0:01:42, time: 0.060, data_time: 0.011, memory: 874, loss: 0.2559
+2023-02-04 21:17:54,868 - mmcls - INFO - Epoch [2][44/72]	lr: 1.000e-04, eta: 0:01:41, time: 0.063, data_time: 0.016, memory: 874, loss: 0.4591
+2023-02-04 21:17:54,991 - mmcls - INFO - Epoch [2][46/72]	lr: 1.000e-04, eta: 0:01:39, time: 0.074, data_time: 0.015, memory: 874, loss: 0.3573
+2023-02-04 21:17:55,125 - mmcls - INFO - Epoch [2][48/72]	lr: 1.000e-04, eta: 0:01:38, time: 0.059, data_time: 0.005, memory: 874, loss: 0.3729
+2023-02-04 21:17:55,249 - mmcls - INFO - Epoch [2][50/72]	lr: 1.000e-04, eta: 0:01:37, time: 0.060, data_time: 0.012, memory: 874, loss: 0.3891
+2023-02-04 21:17:55,381 - mmcls - INFO - Epoch [2][52/72]	lr: 1.000e-04, eta: 0:01:35, time: 0.066, data_time: 0.018, memory: 874, loss: 0.3736
+2023-02-04 21:17:55,655 - mmcls - INFO - Epoch [2][54/72]	lr: 1.000e-04, eta: 0:01:35, time: 0.148, data_time: 0.013, memory: 874, loss: 0.3459
+2023-02-04 21:17:55,794 - mmcls - INFO - Epoch [2][56/72]	lr: 1.000e-04, eta: 0:01:34, time: 0.054, data_time: 0.002, memory: 874, loss: 0.3692
+2023-02-04 21:17:55,915 - mmcls - INFO - Epoch [2][58/72]	lr: 1.000e-04, eta: 0:01:32, time: 0.067, data_time: 0.017, memory: 874, loss: 0.4479
+2023-02-04 21:17:56,033 - mmcls - INFO - Epoch [2][60/72]	lr: 1.000e-04, eta: 0:01:31, time: 0.056, data_time: 0.011, memory: 874, loss: 0.4440
+2023-02-04 21:17:56,157 - mmcls - INFO - Epoch [2][62/72]	lr: 1.000e-04, eta: 0:01:30, time: 0.061, data_time: 0.022, memory: 874, loss: 0.3224
+2023-02-04 21:17:56,338 - mmcls - INFO - Epoch [2][64/72]	lr: 1.000e-04, eta: 0:01:29, time: 0.099, data_time: 0.027, memory: 874, loss: 0.4712
+2023-02-04 21:17:56,455 - mmcls - INFO - Epoch [2][66/72]	lr: 1.000e-04, eta: 0:01:28, time: 0.056, data_time: 0.007, memory: 874, loss: 0.5564
+2023-02-04 21:17:56,576 - mmcls - INFO - Epoch [2][68/72]	lr: 1.000e-04, eta: 0:01:27, time: 0.065, data_time: 0.025, memory: 874, loss: 0.3396
+2023-02-04 21:17:56,823 - mmcls - INFO - Epoch [2][70/72]	lr: 1.000e-04, eta: 0:01:27, time: 0.113, data_time: 0.058, memory: 874, loss: 0.3679
+2023-02-04 21:17:57,065 - mmcls - INFO - Epoch [2][72/72]	lr: 1.000e-04, eta: 0:01:26, time: 0.128, data_time: 0.015, memory: 874, loss: 0.3681
+2023-02-04 21:17:57,071 - mmcls - INFO - Saving checkpoint at 2 epochs
+2023-02-04 21:17:59,159 - mmcls - INFO - Epoch(val) [2][18]	accuracy_top-1: 93.3566
+2023-02-04 21:18:01,499 - mmcls - INFO - Epoch [3][2/72]	lr: 1.000e-04, eta: 0:01:34, time: 1.148, data_time: 1.103, memory: 874, loss: 0.3658
+2023-02-04 21:18:01,694 - mmcls - INFO - Epoch [3][4/72]	lr: 1.000e-04, eta: 0:01:33, time: 0.106, data_time: 0.038, memory: 874, loss: 0.4161
+2023-02-04 21:18:01,813 - mmcls - INFO - Epoch [3][6/72]	lr: 1.000e-04, eta: 0:01:32, time: 0.050, data_time: 0.007, memory: 874, loss: 0.4142
+2023-02-04 21:18:02,064 - mmcls - INFO - Epoch [3][8/72]	lr: 1.000e-04, eta: 0:01:31, time: 0.124, data_time: 0.058, memory: 874, loss: 0.3687
+2023-02-04 21:18:02,194 - mmcls - INFO - Epoch [3][10/72]	lr: 1.000e-04, eta: 0:01:30, time: 0.066, data_time: 0.015, memory: 874, loss: 0.3465
+2023-02-04 21:18:02,324 - mmcls - INFO - Epoch [3][12/72]	lr: 1.000e-04, eta: 0:01:29, time: 0.077, data_time: 0.015, memory: 874, loss: 0.4116
+2023-02-04 21:18:02,555 - mmcls - INFO - Epoch [3][14/72]	lr: 1.000e-04, eta: 0:01:28, time: 0.105, data_time: 0.020, memory: 874, loss: 0.3282
+2023-02-04 21:18:02,671 - mmcls - INFO - Epoch [3][16/72]	lr: 1.000e-04, eta: 0:01:27, time: 0.059, data_time: 0.014, memory: 874, loss: 0.2465
+2023-02-04 21:18:02,794 - mmcls - INFO - Epoch [3][18/72]	lr: 1.000e-04, eta: 0:01:26, time: 0.062, data_time: 0.013, memory: 874, loss: 0.3267
+2023-02-04 21:18:02,912 - mmcls - INFO - Epoch [3][20/72]	lr: 1.000e-04, eta: 0:01:25, time: 0.060, data_time: 0.013, memory: 874, loss: 0.3175
+2023-02-04 21:18:03,058 - mmcls - INFO - Epoch [3][22/72]	lr: 1.000e-04, eta: 0:01:25, time: 0.077, data_time: 0.014, memory: 874, loss: 0.4257
+2023-02-04 21:18:03,185 - mmcls - INFO - Epoch [3][24/72]	lr: 1.000e-04, eta: 0:01:24, time: 0.061, data_time: 0.009, memory: 874, loss: 0.3460
+2023-02-04 21:18:03,303 - mmcls - INFO - Epoch [3][26/72]	lr: 1.000e-04, eta: 0:01:23, time: 0.056, data_time: 0.011, memory: 874, loss: 0.4812
+2023-02-04 21:18:03,443 - mmcls - INFO - Epoch [3][28/72]	lr: 1.000e-04, eta: 0:01:22, time: 0.072, data_time: 0.022, memory: 874, loss: 0.3272
+2023-02-04 21:18:03,581 - mmcls - INFO - Epoch [3][30/72]	lr: 1.000e-04, eta: 0:01:21, time: 0.068, data_time: 0.024, memory: 874, loss: 0.3941
+2023-02-04 21:18:03,719 - mmcls - INFO - Epoch [3][32/72]	lr: 1.000e-04, eta: 0:01:20, time: 0.067, data_time: 0.023, memory: 874, loss: 0.4086
+2023-02-04 21:18:03,845 - mmcls - INFO - Epoch [3][34/72]	lr: 1.000e-04, eta: 0:01:20, time: 0.066, data_time: 0.025, memory: 874, loss: 0.3604
+2023-02-04 21:18:04,022 - mmcls - INFO - Epoch [3][36/72]	lr: 1.000e-04, eta: 0:01:19, time: 0.089, data_time: 0.033, memory: 874, loss: 0.3663
+2023-02-04 21:18:04,269 - mmcls - INFO - Epoch [3][38/72]	lr: 1.000e-04, eta: 0:01:18, time: 0.122, data_time: 0.069, memory: 874, loss: 0.3068
+2023-02-04 21:18:04,468 - mmcls - INFO - Epoch [3][40/72]	lr: 1.000e-04, eta: 0:01:18, time: 0.101, data_time: 0.028, memory: 874, loss: 0.3208
+2023-02-04 21:18:04,578 - mmcls - INFO - Epoch [3][42/72]	lr: 1.000e-04, eta: 0:01:17, time: 0.052, data_time: 0.011, memory: 874, loss: 0.3474
+2023-02-04 21:18:04,696 - mmcls - INFO - Epoch [3][44/72]	lr: 1.000e-04, eta: 0:01:16, time: 0.061, data_time: 0.013, memory: 874, loss: 0.3516
+2023-02-04 21:18:04,816 - mmcls - INFO - Epoch [3][46/72]	lr: 1.000e-04, eta: 0:01:16, time: 0.061, data_time: 0.012, memory: 874, loss: 0.4704
+2023-02-04 21:18:04,940 - mmcls - INFO - Epoch [3][48/72]	lr: 1.000e-04, eta: 0:01:15, time: 0.060, data_time: 0.011, memory: 874, loss: 0.3280
+2023-02-04 21:18:05,066 - mmcls - INFO - Epoch [3][50/72]	lr: 1.000e-04, eta: 0:01:14, time: 0.073, data_time: 0.013, memory: 874, loss: 0.3257
+2023-02-04 21:18:05,242 - mmcls - INFO - Epoch [3][52/72]	lr: 1.000e-04, eta: 0:01:14, time: 0.081, data_time: 0.005, memory: 874, loss: 0.4830
+2023-02-04 21:18:05,358 - mmcls - INFO - Epoch [3][54/72]	lr: 1.000e-04, eta: 0:01:13, time: 0.059, data_time: 0.010, memory: 874, loss: 0.3039
+2023-02-04 21:18:05,475 - mmcls - INFO - Epoch [3][56/72]	lr: 1.000e-04, eta: 0:01:12, time: 0.058, data_time: 0.009, memory: 874, loss: 0.3856
+2023-02-04 21:18:05,603 - mmcls - INFO - Epoch [3][58/72]	lr: 1.000e-04, eta: 0:01:11, time: 0.066, data_time: 0.010, memory: 874, loss: 0.3633
+2023-02-04 21:18:05,803 - mmcls - INFO - Epoch [3][60/72]	lr: 1.000e-04, eta: 0:01:11, time: 0.106, data_time: 0.019, memory: 874, loss: 0.3076
+2023-02-04 21:18:05,918 - mmcls - INFO - Epoch [3][62/72]	lr: 1.000e-04, eta: 0:01:10, time: 0.046, data_time: 0.002, memory: 874, loss: 0.2975
+2023-02-04 21:18:06,042 - mmcls - INFO - Epoch [3][64/72]	lr: 1.000e-04, eta: 0:01:10, time: 0.058, data_time: 0.013, memory: 874, loss: 0.3790
+2023-02-04 21:18:06,164 - mmcls - INFO - Epoch [3][66/72]	lr: 1.000e-04, eta: 0:01:09, time: 0.069, data_time: 0.019, memory: 874, loss: 0.4019
+2023-02-04 21:18:06,275 - mmcls - INFO - Epoch [3][68/72]	lr: 1.000e-04, eta: 0:01:08, time: 0.052, data_time: 0.010, memory: 874, loss: 0.4205
+2023-02-04 21:18:06,489 - mmcls - INFO - Epoch [3][70/72]	lr: 1.000e-04, eta: 0:01:08, time: 0.110, data_time: 0.055, memory: 874, loss: 0.3772
+2023-02-04 21:18:06,656 - mmcls - INFO - Epoch [3][72/72]	lr: 1.000e-04, eta: 0:01:07, time: 0.092, data_time: 0.037, memory: 874, loss: 0.3402
+2023-02-04 21:18:06,658 - mmcls - INFO - Saving checkpoint at 3 epochs
+2023-02-04 21:18:08,443 - mmcls - INFO - Epoch(val) [3][18]	accuracy_top-1: 93.5315
+2023-02-04 21:18:10,723 - mmcls - INFO - Epoch [4][2/72]	lr: 1.000e-04, eta: 0:01:12, time: 1.130, data_time: 1.083, memory: 874, loss: 0.3472
+2023-02-04 21:18:10,862 - mmcls - INFO - Epoch [4][4/72]	lr: 1.000e-04, eta: 0:01:11, time: 0.068, data_time: 0.020, memory: 874, loss: 0.2567
+2023-02-04 21:18:10,983 - mmcls - INFO - Epoch [4][6/72]	lr: 1.000e-04, eta: 0:01:10, time: 0.064, data_time: 0.014, memory: 874, loss: 0.4226
+2023-02-04 21:18:11,114 - mmcls - INFO - Epoch [4][8/72]	lr: 1.000e-04, eta: 0:01:10, time: 0.062, data_time: 0.016, memory: 874, loss: 0.2978
+2023-02-04 21:18:11,313 - mmcls - INFO - Epoch [4][10/72]	lr: 1.000e-04, eta: 0:01:09, time: 0.104, data_time: 0.019, memory: 874, loss: 0.4105
+2023-02-04 21:18:11,435 - mmcls - INFO - Epoch [4][12/72]	lr: 1.000e-04, eta: 0:01:09, time: 0.060, data_time: 0.007, memory: 874, loss: 0.4235
+2023-02-04 21:18:11,554 - mmcls - INFO - Epoch [4][14/72]	lr: 1.000e-04, eta: 0:01:08, time: 0.055, data_time: 0.008, memory: 874, loss: 0.2788
+2023-02-04 21:18:11,669 - mmcls - INFO - Epoch [4][16/72]	lr: 1.000e-04, eta: 0:01:07, time: 0.059, data_time: 0.013, memory: 874, loss: 0.4132
+2023-02-04 21:18:11,771 - mmcls - INFO - Epoch [4][18/72]	lr: 1.000e-04, eta: 0:01:07, time: 0.056, data_time: 0.012, memory: 874, loss: 0.3393
+2023-02-04 21:18:11,895 - mmcls - INFO - Epoch [4][20/72]	lr: 1.000e-04, eta: 0:01:06, time: 0.066, data_time: 0.008, memory: 874, loss: 0.3132
+2023-02-04 21:18:12,071 - mmcls - INFO - Epoch [4][22/72]	lr: 1.000e-04, eta: 0:01:06, time: 0.081, data_time: 0.012, memory: 874, loss: 0.4026
+2023-02-04 21:18:12,224 - mmcls - INFO - Epoch [4][24/72]	lr: 1.000e-04, eta: 0:01:05, time: 0.071, data_time: 0.023, memory: 874, loss: 0.2832
+2023-02-04 21:18:12,354 - mmcls - INFO - Epoch [4][26/72]	lr: 1.000e-04, eta: 0:01:05, time: 0.068, data_time: 0.016, memory: 874, loss: 0.2853
+2023-02-04 21:18:12,483 - mmcls - INFO - Epoch [4][28/72]	lr: 1.000e-04, eta: 0:01:04, time: 0.062, data_time: 0.012, memory: 874, loss: 0.3614
+2023-02-04 21:18:12,606 - mmcls - INFO - Epoch [4][30/72]	lr: 1.000e-04, eta: 0:01:04, time: 0.066, data_time: 0.022, memory: 874, loss: 0.4359
+2023-02-04 21:18:12,783 - mmcls - INFO - Epoch [4][32/72]	lr: 1.000e-04, eta: 0:01:03, time: 0.092, data_time: 0.023, memory: 874, loss: 0.2332
+2023-02-04 21:18:12,921 - mmcls - INFO - Epoch [4][34/72]	lr: 1.000e-04, eta: 0:01:03, time: 0.074, data_time: 0.008, memory: 874, loss: 0.2275
+2023-02-04 21:18:13,094 - mmcls - INFO - Epoch [4][36/72]	lr: 1.000e-04, eta: 0:01:02, time: 0.077, data_time: 0.002, memory: 874, loss: 0.2753
+2023-02-04 21:18:13,202 - mmcls - INFO - Epoch [4][38/72]	lr: 1.000e-04, eta: 0:01:02, time: 0.052, data_time: 0.011, memory: 874, loss: 0.3824
+2023-02-04 21:18:13,327 - mmcls - INFO - Epoch [4][40/72]	lr: 1.000e-04, eta: 0:01:01, time: 0.062, data_time: 0.013, memory: 874, loss: 0.3102
+2023-02-04 21:18:13,461 - mmcls - INFO - Epoch [4][42/72]	lr: 1.000e-04, eta: 0:01:01, time: 0.069, data_time: 0.014, memory: 874, loss: 0.3074
+2023-02-04 21:18:13,584 - mmcls - INFO - Epoch [4][44/72]	lr: 1.000e-04, eta: 0:01:00, time: 0.062, data_time: 0.012, memory: 874, loss: 0.4564
+2023-02-04 21:18:13,728 - mmcls - INFO - Epoch [4][46/72]	lr: 1.000e-04, eta: 0:01:00, time: 0.077, data_time: 0.011, memory: 874, loss: 0.3121
+2023-02-04 21:18:13,838 - mmcls - INFO - Epoch [4][48/72]	lr: 1.000e-04, eta: 0:00:59, time: 0.049, data_time: 0.007, memory: 874, loss: 0.3708
+2023-02-04 21:18:13,953 - mmcls - INFO - Epoch [4][50/72]	lr: 1.000e-04, eta: 0:00:59, time: 0.056, data_time: 0.012, memory: 874, loss: 0.3476
+2023-02-04 21:18:14,080 - mmcls - INFO - Epoch [4][52/72]	lr: 1.000e-04, eta: 0:00:58, time: 0.063, data_time: 0.014, memory: 874, loss: 0.3913
+2023-02-04 21:18:14,184 - mmcls - INFO - Epoch [4][54/72]	lr: 1.000e-04, eta: 0:00:58, time: 0.057, data_time: 0.015, memory: 874, loss: 0.4095
+2023-02-04 21:18:14,331 - mmcls - INFO - Epoch [4][56/72]	lr: 1.000e-04, eta: 0:00:57, time: 0.077, data_time: 0.018, memory: 874, loss: 0.5179
+2023-02-04 21:18:14,474 - mmcls - INFO - Epoch [4][58/72]	lr: 1.000e-04, eta: 0:00:57, time: 0.068, data_time: 0.031, memory: 874, loss: 0.3428
+2023-02-04 21:18:14,692 - mmcls - INFO - Epoch [4][60/72]	lr: 1.000e-04, eta: 0:00:56, time: 0.107, data_time: 0.026, memory: 874, loss: 0.2198
+2023-02-04 21:18:14,826 - mmcls - INFO - Epoch [4][62/72]	lr: 1.000e-04, eta: 0:00:56, time: 0.064, data_time: 0.013, memory: 874, loss: 0.3653
+2023-02-04 21:18:14,942 - mmcls - INFO - Epoch [4][64/72]	lr: 1.000e-04, eta: 0:00:55, time: 0.065, data_time: 0.015, memory: 874, loss: 0.2927
+2023-02-04 21:18:15,080 - mmcls - INFO - Epoch [4][66/72]	lr: 1.000e-04, eta: 0:00:55, time: 0.070, data_time: 0.008, memory: 874, loss: 0.3187
+2023-02-04 21:18:15,218 - mmcls - INFO - Epoch [4][68/72]	lr: 1.000e-04, eta: 0:00:55, time: 0.072, data_time: 0.008, memory: 874, loss: 0.3147
+2023-02-04 21:18:15,356 - mmcls - INFO - Epoch [4][70/72]	lr: 1.000e-04, eta: 0:00:54, time: 0.063, data_time: 0.004, memory: 874, loss: 0.2951
+2023-02-04 21:18:15,451 - mmcls - INFO - Epoch [4][72/72]	lr: 1.000e-04, eta: 0:00:54, time: 0.055, data_time: 0.009, memory: 874, loss: 0.4316
+2023-02-04 21:18:15,452 - mmcls - INFO - Saving checkpoint at 4 epochs
+2023-02-04 21:18:17,313 - mmcls - INFO - Epoch(val) [4][18]	accuracy_top-1: 94.2308
+2023-02-04 21:18:19,605 - mmcls - INFO - Epoch [5][2/72]	lr: 1.000e-04, eta: 0:00:56, time: 1.136, data_time: 1.100, memory: 874, loss: 0.5111
+2023-02-04 21:18:19,851 - mmcls - INFO - Epoch [5][4/72]	lr: 1.000e-04, eta: 0:00:56, time: 0.115, data_time: 0.072, memory: 874, loss: 0.3336
+2023-02-04 21:18:19,980 - mmcls - INFO - Epoch [5][6/72]	lr: 1.000e-04, eta: 0:00:56, time: 0.068, data_time: 0.017, memory: 874, loss: 0.3702
+2023-02-04 21:18:20,084 - mmcls - INFO - Epoch [5][8/72]	lr: 1.000e-04, eta: 0:00:55, time: 0.060, data_time: 0.014, memory: 874, loss: 0.4182
+2023-02-04 21:18:20,203 - mmcls - INFO - Epoch [5][10/72]	lr: 1.000e-04, eta: 0:00:55, time: 0.057, data_time: 0.006, memory: 874, loss: 0.3631
+2023-02-04 21:18:20,328 - mmcls - INFO - Epoch [5][12/72]	lr: 1.000e-04, eta: 0:00:54, time: 0.067, data_time: 0.023, memory: 874, loss: 0.3154
+2023-02-04 21:18:20,543 - mmcls - INFO - Epoch [5][14/72]	lr: 1.000e-04, eta: 0:00:54, time: 0.109, data_time: 0.045, memory: 874, loss: 0.3018
+2023-02-04 21:18:20,686 - mmcls - INFO - Epoch [5][16/72]	lr: 1.000e-04, eta: 0:00:54, time: 0.061, data_time: 0.002, memory: 874, loss: 0.3422
+2023-02-04 21:18:20,814 - mmcls - INFO - Epoch [5][18/72]	lr: 1.000e-04, eta: 0:00:53, time: 0.070, data_time: 0.012, memory: 874, loss: 0.2670
+2023-02-04 21:18:20,942 - mmcls - INFO - Epoch [5][20/72]	lr: 1.000e-04, eta: 0:00:53, time: 0.055, data_time: 0.007, memory: 874, loss: 0.2749
+2023-02-04 21:18:21,094 - mmcls - INFO - Epoch [5][22/72]	lr: 1.000e-04, eta: 0:00:52, time: 0.084, data_time: 0.019, memory: 874, loss: 0.3351
+2023-02-04 21:18:21,216 - mmcls - INFO - Epoch [5][24/72]	lr: 1.000e-04, eta: 0:00:52, time: 0.058, data_time: 0.008, memory: 874, loss: 0.4201
+2023-02-04 21:18:21,343 - mmcls - INFO - Epoch [5][26/72]	lr: 1.000e-04, eta: 0:00:51, time: 0.062, data_time: 0.011, memory: 874, loss: 0.3160
+2023-02-04 21:18:21,473 - mmcls - INFO - Epoch [5][28/72]	lr: 1.000e-04, eta: 0:00:51, time: 0.066, data_time: 0.013, memory: 874, loss: 0.3365
+2023-02-04 21:18:21,601 - mmcls - INFO - Epoch [5][30/72]	lr: 1.000e-04, eta: 0:00:51, time: 0.064, data_time: 0.011, memory: 874, loss: 0.4154
+2023-02-04 21:18:21,729 - mmcls - INFO - Epoch [5][32/72]	lr: 1.000e-04, eta: 0:00:50, time: 0.069, data_time: 0.014, memory: 874, loss: 0.3407
+2023-02-04 21:18:21,873 - mmcls - INFO - Epoch [5][34/72]	lr: 1.000e-04, eta: 0:00:50, time: 0.068, data_time: 0.007, memory: 874, loss: 0.3103
+2023-02-04 21:18:22,082 - mmcls - INFO - Epoch [5][36/72]	lr: 1.000e-04, eta: 0:00:49, time: 0.109, data_time: 0.013, memory: 874, loss: 0.3787
+2023-02-04 21:18:22,217 - mmcls - INFO - Epoch [5][38/72]	lr: 1.000e-04, eta: 0:00:49, time: 0.069, data_time: 0.007, memory: 874, loss: 0.4022
+2023-02-04 21:18:22,344 - mmcls - INFO - Epoch [5][40/72]	lr: 1.000e-04, eta: 0:00:49, time: 0.055, data_time: 0.004, memory: 874, loss: 0.3594
+2023-02-04 21:18:22,457 - mmcls - INFO - Epoch [5][42/72]	lr: 1.000e-04, eta: 0:00:48, time: 0.058, data_time: 0.013, memory: 874, loss: 0.2532
+2023-02-04 21:18:22,565 - mmcls - INFO - Epoch [5][44/72]	lr: 1.000e-04, eta: 0:00:48, time: 0.057, data_time: 0.011, memory: 874, loss: 0.3112
+2023-02-04 21:18:22,726 - mmcls - INFO - Epoch [5][46/72]	lr: 1.000e-04, eta: 0:00:47, time: 0.085, data_time: 0.010, memory: 874, loss: 0.3210
+2023-02-04 21:18:22,878 - mmcls - INFO - Epoch [5][48/72]	lr: 1.000e-04, eta: 0:00:47, time: 0.076, data_time: 0.005, memory: 874, loss: 0.3275
+2023-02-04 21:18:23,009 - mmcls - INFO - Epoch [5][50/72]	lr: 1.000e-04, eta: 0:00:47, time: 0.055, data_time: 0.004, memory: 874, loss: 0.3511
+2023-02-04 21:18:23,160 - mmcls - INFO - Epoch [5][52/72]	lr: 1.000e-04, eta: 0:00:46, time: 0.084, data_time: 0.016, memory: 874, loss: 0.3712
+2023-02-04 21:18:23,288 - mmcls - INFO - Epoch [5][54/72]	lr: 1.000e-04, eta: 0:00:46, time: 0.060, data_time: 0.005, memory: 874, loss: 0.2738
+2023-02-04 21:18:23,416 - mmcls - INFO - Epoch [5][56/72]	lr: 1.000e-04, eta: 0:00:46, time: 0.061, data_time: 0.009, memory: 874, loss: 0.3402
+2023-02-04 21:18:23,535 - mmcls - INFO - Epoch [5][58/72]	lr: 1.000e-04, eta: 0:00:45, time: 0.061, data_time: 0.012, memory: 874, loss: 0.4179
+2023-02-04 21:18:23,666 - mmcls - INFO - Epoch [5][60/72]	lr: 1.000e-04, eta: 0:00:45, time: 0.073, data_time: 0.010, memory: 874, loss: 0.3109
+2023-02-04 21:18:23,809 - mmcls - INFO - Epoch [5][62/72]	lr: 1.000e-04, eta: 0:00:45, time: 0.066, data_time: 0.003, memory: 874, loss: 0.3321
+2023-02-04 21:18:23,935 - mmcls - INFO - Epoch [5][64/72]	lr: 1.000e-04, eta: 0:00:44, time: 0.068, data_time: 0.008, memory: 874, loss: 0.2568
+2023-02-04 21:18:24,047 - mmcls - INFO - Epoch [5][66/72]	lr: 1.000e-04, eta: 0:00:44, time: 0.051, data_time: 0.002, memory: 874, loss: 0.3779
+2023-02-04 21:18:24,167 - mmcls - INFO - Epoch [5][68/72]	lr: 1.000e-04, eta: 0:00:43, time: 0.059, data_time: 0.007, memory: 874, loss: 0.2806
+2023-02-04 21:18:24,284 - mmcls - INFO - Epoch [5][70/72]	lr: 1.000e-04, eta: 0:00:43, time: 0.057, data_time: 0.008, memory: 874, loss: 0.3231
+2023-02-04 21:18:24,361 - mmcls - INFO - Epoch [5][72/72]	lr: 1.000e-04, eta: 0:00:43, time: 0.047, data_time: 0.010, memory: 874, loss: 0.3331
+2023-02-04 21:18:24,361 - mmcls - INFO - Saving checkpoint at 5 epochs
+2023-02-04 21:18:26,325 - mmcls - INFO - Epoch(val) [5][18]	accuracy_top-1: 94.4056
+2023-02-04 21:18:28,760 - mmcls - INFO - Epoch [6][2/72]	lr: 1.000e-04, eta: 0:00:45, time: 1.210, data_time: 1.124, memory: 874, loss: 0.4233
+2023-02-04 21:18:29,052 - mmcls - INFO - Epoch [6][4/72]	lr: 1.000e-04, eta: 0:00:44, time: 0.149, data_time: 0.009, memory: 874, loss: 0.3480
+2023-02-04 21:18:29,335 - mmcls - INFO - Epoch [6][6/72]	lr: 1.000e-04, eta: 0:00:44, time: 0.144, data_time: 0.012, memory: 874, loss: 0.2927
+2023-02-04 21:18:29,432 - mmcls - INFO - Epoch [6][8/72]	lr: 1.000e-04, eta: 0:00:44, time: 0.041, data_time: 0.002, memory: 874, loss: 0.2797
+2023-02-04 21:18:29,724 - mmcls - INFO - Epoch [6][10/72]	lr: 1.000e-04, eta: 0:00:44, time: 0.148, data_time: 0.010, memory: 874, loss: 0.3017
+2023-02-04 21:18:29,847 - mmcls - INFO - Epoch [6][12/72]	lr: 1.000e-04, eta: 0:00:43, time: 0.060, data_time: 0.008, memory: 874, loss: 0.3327
+2023-02-04 21:18:30,121 - mmcls - INFO - Epoch [6][14/72]	lr: 1.000e-04, eta: 0:00:43, time: 0.130, data_time: 0.011, memory: 874, loss: 0.3641
+2023-02-04 21:18:30,230 - mmcls - INFO - Epoch [6][16/72]	lr: 1.000e-04, eta: 0:00:43, time: 0.059, data_time: 0.017, memory: 874, loss: 0.4674
+2023-02-04 21:18:30,417 - mmcls - INFO - Epoch [6][18/72]	lr: 1.000e-04, eta: 0:00:42, time: 0.103, data_time: 0.012, memory: 874, loss: 0.2768
+2023-02-04 21:18:30,588 - mmcls - INFO - Epoch [6][20/72]	lr: 1.000e-04, eta: 0:00:42, time: 0.074, data_time: 0.004, memory: 874, loss: 0.3802
+2023-02-04 21:18:30,701 - mmcls - INFO - Epoch [6][22/72]	lr: 1.000e-04, eta: 0:00:42, time: 0.060, data_time: 0.013, memory: 874, loss: 0.3376
+2023-02-04 21:18:30,845 - mmcls - INFO - Epoch [6][24/72]	lr: 1.000e-04, eta: 0:00:41, time: 0.076, data_time: 0.010, memory: 874, loss: 0.4955
+2023-02-04 21:18:30,985 - mmcls - INFO - Epoch [6][26/72]	lr: 1.000e-04, eta: 0:00:41, time: 0.063, data_time: 0.006, memory: 874, loss: 0.3372
+2023-02-04 21:18:31,113 - mmcls - INFO - Epoch [6][28/72]	lr: 1.000e-04, eta: 0:00:41, time: 0.065, data_time: 0.014, memory: 874, loss: 0.3644
+2023-02-04 21:18:31,254 - mmcls - INFO - Epoch [6][30/72]	lr: 1.000e-04, eta: 0:00:40, time: 0.080, data_time: 0.013, memory: 874, loss: 0.3190
+2023-02-04 21:18:31,410 - mmcls - INFO - Epoch [6][32/72]	lr: 1.000e-04, eta: 0:00:40, time: 0.077, data_time: 0.008, memory: 874, loss: 0.3236
+2023-02-04 21:18:31,557 - mmcls - INFO - Epoch [6][34/72]	lr: 1.000e-04, eta: 0:00:40, time: 0.063, data_time: 0.010, memory: 874, loss: 0.4269
+2023-02-04 21:18:31,685 - mmcls - INFO - Epoch [6][36/72]	lr: 1.000e-04, eta: 0:00:39, time: 0.065, data_time: 0.015, memory: 874, loss: 0.4173
+2023-02-04 21:18:31,784 - mmcls - INFO - Epoch [6][38/72]	lr: 1.000e-04, eta: 0:00:39, time: 0.055, data_time: 0.013, memory: 874, loss: 0.3166
+2023-02-04 21:18:32,036 - mmcls - INFO - Epoch [6][40/72]	lr: 1.000e-04, eta: 0:00:39, time: 0.131, data_time: 0.023, memory: 874, loss: 0.2322
+2023-02-04 21:18:32,258 - mmcls - INFO - Epoch [6][42/72]	lr: 1.000e-04, eta: 0:00:38, time: 0.103, data_time: 0.055, memory: 874, loss: 0.3362
+2023-02-04 21:18:32,370 - mmcls - INFO - Epoch [6][44/72]	lr: 1.000e-04, eta: 0:00:38, time: 0.054, data_time: 0.010, memory: 874, loss: 0.3655
+2023-02-04 21:18:32,507 - mmcls - INFO - Epoch [6][46/72]	lr: 1.000e-04, eta: 0:00:38, time: 0.070, data_time: 0.013, memory: 874, loss: 0.3107
+2023-02-04 21:18:32,686 - mmcls - INFO - Epoch [6][48/72]	lr: 1.000e-04, eta: 0:00:37, time: 0.100, data_time: 0.014, memory: 874, loss: 0.3023
+2023-02-04 21:18:32,830 - mmcls - INFO - Epoch [6][50/72]	lr: 1.000e-04, eta: 0:00:37, time: 0.071, data_time: 0.002, memory: 874, loss: 0.3285
+2023-02-04 21:18:32,945 - mmcls - INFO - Epoch [6][52/72]	lr: 1.000e-04, eta: 0:00:37, time: 0.049, data_time: 0.003, memory: 874, loss: 0.2910
+2023-02-04 21:18:33,061 - mmcls - INFO - Epoch [6][54/72]	lr: 1.000e-04, eta: 0:00:36, time: 0.057, data_time: 0.011, memory: 874, loss: 0.2713
+2023-02-04 21:18:33,179 - mmcls - INFO - Epoch [6][56/72]	lr: 1.000e-04, eta: 0:00:36, time: 0.058, data_time: 0.013, memory: 874, loss: 0.3134
+2023-02-04 21:18:33,299 - mmcls - INFO - Epoch [6][58/72]	lr: 1.000e-04, eta: 0:00:36, time: 0.060, data_time: 0.013, memory: 874, loss: 0.3900
+2023-02-04 21:18:33,424 - mmcls - INFO - Epoch [6][60/72]	lr: 1.000e-04, eta: 0:00:35, time: 0.062, data_time: 0.012, memory: 874, loss: 0.2842
+2023-02-04 21:18:33,549 - mmcls - INFO - Epoch [6][62/72]	lr: 1.000e-04, eta: 0:00:35, time: 0.063, data_time: 0.013, memory: 874, loss: 0.1771
+2023-02-04 21:18:33,678 - mmcls - INFO - Epoch [6][64/72]	lr: 1.000e-04, eta: 0:00:35, time: 0.067, data_time: 0.012, memory: 874, loss: 0.2569
+2023-02-04 21:18:33,834 - mmcls - INFO - Epoch [6][66/72]	lr: 1.000e-04, eta: 0:00:34, time: 0.077, data_time: 0.010, memory: 874, loss: 0.4090
+2023-02-04 21:18:33,950 - mmcls - INFO - Epoch [6][68/72]	lr: 1.000e-04, eta: 0:00:34, time: 0.055, data_time: 0.010, memory: 874, loss: 0.3167
+2023-02-04 21:18:34,068 - mmcls - INFO - Epoch [6][70/72]	lr: 1.000e-04, eta: 0:00:34, time: 0.062, data_time: 0.013, memory: 874, loss: 0.3342
+2023-02-04 21:18:34,161 - mmcls - INFO - Epoch [6][72/72]	lr: 1.000e-04, eta: 0:00:33, time: 0.055, data_time: 0.010, memory: 874, loss: 0.3590
+2023-02-04 21:18:34,161 - mmcls - INFO - Saving checkpoint at 6 epochs
+2023-02-04 21:18:35,941 - mmcls - INFO - Epoch(val) [6][18]	accuracy_top-1: 94.0559
+2023-02-04 21:18:38,207 - mmcls - INFO - Epoch [7][2/72]	lr: 1.000e-04, eta: 0:00:35, time: 1.120, data_time: 1.079, memory: 874, loss: 0.2837
+2023-02-04 21:18:38,363 - mmcls - INFO - Epoch [7][4/72]	lr: 1.000e-04, eta: 0:00:34, time: 0.075, data_time: 0.024, memory: 874, loss: 0.2527
+2023-02-04 21:18:38,472 - mmcls - INFO - Epoch [7][6/72]	lr: 1.000e-04, eta: 0:00:34, time: 0.059, data_time: 0.016, memory: 874, loss: 0.3617
+2023-02-04 21:18:38,611 - mmcls - INFO - Epoch [7][8/72]	lr: 1.000e-04, eta: 0:00:34, time: 0.067, data_time: 0.023, memory: 874, loss: 0.2424
+2023-02-04 21:18:38,727 - mmcls - INFO - Epoch [7][10/72]	lr: 1.000e-04, eta: 0:00:33, time: 0.058, data_time: 0.014, memory: 874, loss: 0.3044
+2023-02-04 21:18:38,849 - mmcls - INFO - Epoch [7][12/72]	lr: 1.000e-04, eta: 0:00:33, time: 0.060, data_time: 0.014, memory: 874, loss: 0.2547
+2023-02-04 21:18:39,009 - mmcls - INFO - Epoch [7][14/72]	lr: 1.000e-04, eta: 0:00:33, time: 0.093, data_time: 0.029, memory: 874, loss: 0.3013
+2023-02-04 21:18:39,167 - mmcls - INFO - Epoch [7][16/72]	lr: 1.000e-04, eta: 0:00:32, time: 0.073, data_time: 0.003, memory: 874, loss: 0.2693
+2023-02-04 21:18:39,294 - mmcls - INFO - Epoch [7][18/72]	lr: 1.000e-04, eta: 0:00:32, time: 0.061, data_time: 0.008, memory: 874, loss: 0.2851
+2023-02-04 21:18:39,423 - mmcls - INFO - Epoch [7][20/72]	lr: 1.000e-04, eta: 0:00:32, time: 0.060, data_time: 0.010, memory: 874, loss: 0.3171
+2023-02-04 21:18:39,540 - mmcls - INFO - Epoch [7][22/72]	lr: 1.000e-04, eta: 0:00:31, time: 0.059, data_time: 0.015, memory: 874, loss: 0.3741
+2023-02-04 21:18:39,657 - mmcls - INFO - Epoch [7][24/72]	lr: 1.000e-04, eta: 0:00:31, time: 0.062, data_time: 0.014, memory: 874, loss: 0.2701
+2023-02-04 21:18:39,785 - mmcls - INFO - Epoch [7][26/72]	lr: 1.000e-04, eta: 0:00:31, time: 0.064, data_time: 0.011, memory: 874, loss: 0.2847
+2023-02-04 21:18:39,917 - mmcls - INFO - Epoch [7][28/72]	lr: 1.000e-04, eta: 0:00:31, time: 0.066, data_time: 0.011, memory: 874, loss: 0.3818
+2023-02-04 21:18:40,104 - mmcls - INFO - Epoch [7][30/72]	lr: 1.000e-04, eta: 0:00:30, time: 0.096, data_time: 0.014, memory: 874, loss: 0.2950
+2023-02-04 21:18:40,210 - mmcls - INFO - Epoch [7][32/72]	lr: 1.000e-04, eta: 0:00:30, time: 0.059, data_time: 0.008, memory: 874, loss: 0.3162
+2023-02-04 21:18:40,308 - mmcls - INFO - Epoch [7][34/72]	lr: 1.000e-04, eta: 0:00:30, time: 0.042, data_time: 0.007, memory: 874, loss: 0.2793
+2023-02-04 21:18:40,503 - mmcls - INFO - Epoch [7][36/72]	lr: 1.000e-04, eta: 0:00:29, time: 0.095, data_time: 0.059, memory: 874, loss: 0.2733
+2023-02-04 21:18:40,693 - mmcls - INFO - Epoch [7][38/72]	lr: 1.000e-04, eta: 0:00:29, time: 0.092, data_time: 0.054, memory: 874, loss: 0.3332
+2023-02-04 21:18:40,911 - mmcls - INFO - Epoch [7][40/72]	lr: 1.000e-04, eta: 0:00:29, time: 0.115, data_time: 0.020, memory: 874, loss: 0.3365
+2023-02-04 21:18:41,029 - mmcls - INFO - Epoch [7][42/72]	lr: 1.000e-04, eta: 0:00:29, time: 0.058, data_time: 0.010, memory: 874, loss: 0.2495
+2023-02-04 21:18:41,149 - mmcls - INFO - Epoch [7][44/72]	lr: 1.000e-04, eta: 0:00:28, time: 0.061, data_time: 0.011, memory: 874, loss: 0.3225
+2023-02-04 21:18:41,269 - mmcls - INFO - Epoch [7][46/72]	lr: 1.000e-04, eta: 0:00:28, time: 0.057, data_time: 0.010, memory: 874, loss: 0.2806
+2023-02-04 21:18:41,398 - mmcls - INFO - Epoch [7][48/72]	lr: 1.000e-04, eta: 0:00:28, time: 0.066, data_time: 0.012, memory: 874, loss: 0.2471
+2023-02-04 21:18:41,542 - mmcls - INFO - Epoch [7][50/72]	lr: 1.000e-04, eta: 0:00:27, time: 0.080, data_time: 0.011, memory: 874, loss: 0.3240
+2023-02-04 21:18:41,671 - mmcls - INFO - Epoch [7][52/72]	lr: 1.000e-04, eta: 0:00:27, time: 0.055, data_time: 0.004, memory: 874, loss: 0.2739
+2023-02-04 21:18:41,781 - mmcls - INFO - Epoch [7][54/72]	lr: 1.000e-04, eta: 0:00:27, time: 0.056, data_time: 0.012, memory: 874, loss: 0.4218
+2023-02-04 21:18:41,910 - mmcls - INFO - Epoch [7][56/72]	lr: 1.000e-04, eta: 0:00:27, time: 0.064, data_time: 0.011, memory: 874, loss: 0.4265
+2023-02-04 21:18:42,037 - mmcls - INFO - Epoch [7][58/72]	lr: 1.000e-04, eta: 0:00:26, time: 0.062, data_time: 0.011, memory: 874, loss: 0.4016
+2023-02-04 21:18:42,192 - mmcls - INFO - Epoch [7][60/72]	lr: 1.000e-04, eta: 0:00:26, time: 0.087, data_time: 0.014, memory: 874, loss: 0.3991
+2023-02-04 21:18:42,340 - mmcls - INFO - Epoch [7][62/72]	lr: 1.000e-04, eta: 0:00:26, time: 0.064, data_time: 0.005, memory: 874, loss: 0.3276
+2023-02-04 21:18:42,458 - mmcls - INFO - Epoch [7][64/72]	lr: 1.000e-04, eta: 0:00:25, time: 0.058, data_time: 0.013, memory: 874, loss: 0.3336
+2023-02-04 21:18:42,578 - mmcls - INFO - Epoch [7][66/72]	lr: 1.000e-04, eta: 0:00:25, time: 0.065, data_time: 0.015, memory: 874, loss: 0.2634
+2023-02-04 21:18:42,695 - mmcls - INFO - Epoch [7][68/72]	lr: 1.000e-04, eta: 0:00:25, time: 0.067, data_time: 0.010, memory: 874, loss: 0.3600
+2023-02-04 21:18:42,849 - mmcls - INFO - Epoch [7][70/72]	lr: 1.000e-04, eta: 0:00:25, time: 0.064, data_time: 0.001, memory: 874, loss: 0.3085
+2023-02-04 21:18:42,991 - mmcls - INFO - Epoch [7][72/72]	lr: 1.000e-04, eta: 0:00:24, time: 0.084, data_time: 0.015, memory: 874, loss: 0.3931
+2023-02-04 21:18:42,992 - mmcls - INFO - Saving checkpoint at 7 epochs
+2023-02-04 21:18:44,616 - mmcls - INFO - Epoch(val) [7][18]	accuracy_top-1: 94.4056
+2023-02-04 21:18:46,880 - mmcls - INFO - Epoch [8][2/72]	lr: 1.000e-04, eta: 0:00:25, time: 1.124, data_time: 1.067, memory: 874, loss: 0.3359
+2023-02-04 21:18:47,027 - mmcls - INFO - Epoch [8][4/72]	lr: 1.000e-04, eta: 0:00:25, time: 0.069, data_time: 0.010, memory: 874, loss: 0.3565
+2023-02-04 21:18:47,174 - mmcls - INFO - Epoch [8][6/72]	lr: 1.000e-04, eta: 0:00:24, time: 0.077, data_time: 0.013, memory: 874, loss: 0.2492
+2023-02-04 21:18:47,302 - mmcls - INFO - Epoch [8][8/72]	lr: 1.000e-04, eta: 0:00:24, time: 0.060, data_time: 0.010, memory: 874, loss: 0.2437
+2023-02-04 21:18:47,426 - mmcls - INFO - Epoch [8][10/72]	lr: 1.000e-04, eta: 0:00:24, time: 0.069, data_time: 0.013, memory: 874, loss: 0.3326
+2023-02-04 21:18:47,546 - mmcls - INFO - Epoch [8][12/72]	lr: 1.000e-04, eta: 0:00:24, time: 0.059, data_time: 0.008, memory: 874, loss: 0.3280
+2023-02-04 21:18:47,668 - mmcls - INFO - Epoch [8][14/72]	lr: 1.000e-04, eta: 0:00:23, time: 0.056, data_time: 0.008, memory: 874, loss: 0.3026
+2023-02-04 21:18:47,789 - mmcls - INFO - Epoch [8][16/72]	lr: 1.000e-04, eta: 0:00:23, time: 0.062, data_time: 0.013, memory: 874, loss: 0.2454
+2023-02-04 21:18:47,908 - mmcls - INFO - Epoch [8][18/72]	lr: 1.000e-04, eta: 0:00:23, time: 0.058, data_time: 0.012, memory: 874, loss: 0.2672
+2023-02-04 21:18:48,058 - mmcls - INFO - Epoch [8][20/72]	lr: 1.000e-04, eta: 0:00:22, time: 0.087, data_time: 0.014, memory: 874, loss: 0.3919
+2023-02-04 21:18:48,173 - mmcls - INFO - Epoch [8][22/72]	lr: 1.000e-04, eta: 0:00:22, time: 0.050, data_time: 0.001, memory: 874, loss: 0.2621
+2023-02-04 21:18:48,337 - mmcls - INFO - Epoch [8][24/72]	lr: 1.000e-04, eta: 0:00:22, time: 0.087, data_time: 0.038, memory: 874, loss: 0.1769
+2023-02-04 21:18:48,517 - mmcls - INFO - Epoch [8][26/72]	lr: 1.000e-04, eta: 0:00:22, time: 0.091, data_time: 0.043, memory: 874, loss: 0.2892
+2023-02-04 21:18:48,682 - mmcls - INFO - Epoch [8][28/72]	lr: 1.000e-04, eta: 0:00:21, time: 0.074, data_time: 0.003, memory: 874, loss: 0.2805
+2023-02-04 21:18:48,848 - mmcls - INFO - Epoch [8][30/72]	lr: 1.000e-04, eta: 0:00:21, time: 0.081, data_time: 0.011, memory: 874, loss: 0.3654
+2023-02-04 21:18:48,960 - mmcls - INFO - Epoch [8][32/72]	lr: 1.000e-04, eta: 0:00:21, time: 0.057, data_time: 0.013, memory: 874, loss: 0.4149
+2023-02-04 21:18:49,089 - mmcls - INFO - Epoch [8][34/72]	lr: 1.000e-04, eta: 0:00:21, time: 0.061, data_time: 0.012, memory: 874, loss: 0.1830
+2023-02-04 21:18:49,208 - mmcls - INFO - Epoch [8][36/72]	lr: 1.000e-04, eta: 0:00:20, time: 0.064, data_time: 0.014, memory: 874, loss: 0.3481
+2023-02-04 21:18:49,329 - mmcls - INFO - Epoch [8][38/72]	lr: 1.000e-04, eta: 0:00:20, time: 0.066, data_time: 0.010, memory: 874, loss: 0.2530
+2023-02-04 21:18:49,477 - mmcls - INFO - Epoch [8][40/72]	lr: 1.000e-04, eta: 0:00:20, time: 0.073, data_time: 0.007, memory: 874, loss: 0.3924
+2023-02-04 21:18:49,636 - mmcls - INFO - Epoch [8][42/72]	lr: 1.000e-04, eta: 0:00:20, time: 0.083, data_time: 0.006, memory: 874, loss: 0.2724
+2023-02-04 21:18:49,800 - mmcls - INFO - Epoch [8][44/72]	lr: 1.000e-04, eta: 0:00:19, time: 0.083, data_time: 0.003, memory: 874, loss: 0.2651
+2023-02-04 21:18:49,941 - mmcls - INFO - Epoch [8][46/72]	lr: 1.000e-04, eta: 0:00:19, time: 0.065, data_time: 0.002, memory: 874, loss: 0.3333
+2023-02-04 21:18:50,097 - mmcls - INFO - Epoch [8][48/72]	lr: 1.000e-04, eta: 0:00:19, time: 0.083, data_time: 0.007, memory: 874, loss: 0.3799
+2023-02-04 21:18:50,228 - mmcls - INFO - Epoch [8][50/72]	lr: 1.000e-04, eta: 0:00:19, time: 0.053, data_time: 0.002, memory: 874, loss: 0.2233
+2023-02-04 21:18:50,350 - mmcls - INFO - Epoch [8][52/72]	lr: 1.000e-04, eta: 0:00:18, time: 0.066, data_time: 0.014, memory: 874, loss: 0.3939
+2023-02-04 21:18:50,485 - mmcls - INFO - Epoch [8][54/72]	lr: 1.000e-04, eta: 0:00:18, time: 0.074, data_time: 0.010, memory: 874, loss: 0.3461
+2023-02-04 21:18:50,661 - mmcls - INFO - Epoch [8][56/72]	lr: 1.000e-04, eta: 0:00:18, time: 0.088, data_time: 0.004, memory: 874, loss: 0.2999
+2023-02-04 21:18:50,793 - mmcls - INFO - Epoch [8][58/72]	lr: 1.000e-04, eta: 0:00:18, time: 0.062, data_time: 0.008, memory: 874, loss: 0.2775
+2023-02-04 21:18:51,061 - mmcls - INFO - Epoch [8][60/72]	lr: 1.000e-04, eta: 0:00:17, time: 0.131, data_time: 0.058, memory: 874, loss: 0.3351
+2023-02-04 21:18:51,190 - mmcls - INFO - Epoch [8][62/72]	lr: 1.000e-04, eta: 0:00:17, time: 0.069, data_time: 0.010, memory: 874, loss: 0.3002
+2023-02-04 21:18:51,346 - mmcls - INFO - Epoch [8][64/72]	lr: 1.000e-04, eta: 0:00:17, time: 0.078, data_time: 0.006, memory: 874, loss: 0.2936
+2023-02-04 21:18:51,572 - mmcls - INFO - Epoch [8][66/72]	lr: 1.000e-04, eta: 0:00:17, time: 0.116, data_time: 0.010, memory: 874, loss: 0.2219
+2023-02-04 21:18:51,705 - mmcls - INFO - Epoch [8][68/72]	lr: 1.000e-04, eta: 0:00:16, time: 0.060, data_time: 0.003, memory: 874, loss: 0.3271
+2023-02-04 21:18:51,825 - mmcls - INFO - Epoch [8][70/72]	lr: 1.000e-04, eta: 0:00:16, time: 0.058, data_time: 0.010, memory: 874, loss: 0.3978
+2023-02-04 21:18:51,946 - mmcls - INFO - Epoch [8][72/72]	lr: 1.000e-04, eta: 0:00:16, time: 0.069, data_time: 0.011, memory: 874, loss: 0.3036
+2023-02-04 21:18:51,948 - mmcls - INFO - Saving checkpoint at 8 epochs
+2023-02-04 21:18:53,817 - mmcls - INFO - Epoch(val) [8][18]	accuracy_top-1: 94.0559
+2023-02-04 21:18:56,179 - mmcls - INFO - Epoch [9][2/72]	lr: 1.000e-04, eta: 0:00:16, time: 1.179, data_time: 1.088, memory: 874, loss: 0.4708
+2023-02-04 21:18:56,647 - mmcls - INFO - Epoch [9][4/72]	lr: 1.000e-04, eta: 0:00:16, time: 0.233, data_time: 0.036, memory: 874, loss: 0.2576
+2023-02-04 21:18:56,988 - mmcls - INFO - Epoch [9][6/72]	lr: 1.000e-04, eta: 0:00:16, time: 0.165, data_time: 0.006, memory: 874, loss: 0.3308
+2023-02-04 21:18:57,108 - mmcls - INFO - Epoch [9][8/72]	lr: 1.000e-04, eta: 0:00:15, time: 0.058, data_time: 0.008, memory: 874, loss: 0.2118
+2023-02-04 21:18:57,288 - mmcls - INFO - Epoch [9][10/72]	lr: 1.000e-04, eta: 0:00:15, time: 0.092, data_time: 0.010, memory: 874, loss: 0.3187
+2023-02-04 21:18:57,499 - mmcls - INFO - Epoch [9][12/72]	lr: 1.000e-04, eta: 0:00:15, time: 0.099, data_time: 0.010, memory: 874, loss: 0.1853
+2023-02-04 21:18:57,630 - mmcls - INFO - Epoch [9][14/72]	lr: 1.000e-04, eta: 0:00:15, time: 0.070, data_time: 0.015, memory: 874, loss: 0.2629
+2023-02-04 21:18:57,856 - mmcls - INFO - Epoch [9][16/72]	lr: 1.000e-04, eta: 0:00:15, time: 0.115, data_time: 0.013, memory: 874, loss: 0.2540
+2023-02-04 21:18:57,955 - mmcls - INFO - Epoch [9][18/72]	lr: 1.000e-04, eta: 0:00:14, time: 0.049, data_time: 0.008, memory: 874, loss: 0.2662
+2023-02-04 21:18:58,073 - mmcls - INFO - Epoch [9][20/72]	lr: 1.000e-04, eta: 0:00:14, time: 0.063, data_time: 0.008, memory: 874, loss: 0.2550
+2023-02-04 21:18:58,317 - mmcls - INFO - Epoch [9][22/72]	lr: 1.000e-04, eta: 0:00:14, time: 0.117, data_time: 0.033, memory: 874, loss: 0.3229
+2023-02-04 21:18:58,452 - mmcls - INFO - Epoch [9][24/72]	lr: 1.000e-04, eta: 0:00:13, time: 0.064, data_time: 0.015, memory: 874, loss: 0.2241
+2023-02-04 21:18:58,710 - mmcls - INFO - Epoch [9][26/72]	lr: 1.000e-04, eta: 0:00:13, time: 0.128, data_time: 0.050, memory: 874, loss: 0.3285
+2023-02-04 21:18:58,817 - mmcls - INFO - Epoch [9][28/72]	lr: 1.000e-04, eta: 0:00:13, time: 0.058, data_time: 0.013, memory: 874, loss: 0.2081
+2023-02-04 21:18:59,087 - mmcls - INFO - Epoch [9][30/72]	lr: 1.000e-04, eta: 0:00:13, time: 0.127, data_time: 0.041, memory: 874, loss: 0.3869
+2023-02-04 21:18:59,209 - mmcls - INFO - Epoch [9][32/72]	lr: 1.000e-04, eta: 0:00:13, time: 0.065, data_time: 0.017, memory: 874, loss: 0.3056
+2023-02-04 21:18:59,330 - mmcls - INFO - Epoch [9][34/72]	lr: 1.000e-04, eta: 0:00:12, time: 0.071, data_time: 0.012, memory: 874, loss: 0.3035
+2023-02-04 21:18:59,567 - mmcls - INFO - Epoch [9][36/72]	lr: 1.000e-04, eta: 0:00:12, time: 0.112, data_time: 0.034, memory: 874, loss: 0.2926
+2023-02-04 21:18:59,694 - mmcls - INFO - Epoch [9][38/72]	lr: 1.000e-04, eta: 0:00:12, time: 0.071, data_time: 0.012, memory: 874, loss: 0.2843
+2023-02-04 21:18:59,899 - mmcls - INFO - Epoch [9][40/72]	lr: 1.000e-04, eta: 0:00:12, time: 0.102, data_time: 0.008, memory: 874, loss: 0.3067
+2023-02-04 21:19:00,042 - mmcls - INFO - Epoch [9][42/72]	lr: 1.000e-04, eta: 0:00:11, time: 0.063, data_time: 0.017, memory: 874, loss: 0.2514
+2023-02-04 21:19:00,301 - mmcls - INFO - Epoch [9][44/72]	lr: 1.000e-04, eta: 0:00:11, time: 0.132, data_time: 0.066, memory: 874, loss: 0.2388
+2023-02-04 21:19:00,422 - mmcls - INFO - Epoch [9][46/72]	lr: 1.000e-04, eta: 0:00:11, time: 0.057, data_time: 0.026, memory: 874, loss: 0.3176
+2023-02-04 21:19:00,659 - mmcls - INFO - Epoch [9][48/72]	lr: 1.000e-04, eta: 0:00:11, time: 0.128, data_time: 0.026, memory: 874, loss: 0.3294
+2023-02-04 21:19:00,776 - mmcls - INFO - Epoch [9][50/72]	lr: 1.000e-04, eta: 0:00:10, time: 0.051, data_time: 0.013, memory: 874, loss: 0.2963
+2023-02-04 21:19:01,008 - mmcls - INFO - Epoch [9][52/72]	lr: 1.000e-04, eta: 0:00:10, time: 0.114, data_time: 0.080, memory: 874, loss: 0.3756
+2023-02-04 21:19:01,223 - mmcls - INFO - Epoch [9][54/72]	lr: 1.000e-04, eta: 0:00:10, time: 0.111, data_time: 0.030, memory: 874, loss: 0.2583
+2023-02-04 21:19:01,328 - mmcls - INFO - Epoch [9][56/72]	lr: 1.000e-04, eta: 0:00:10, time: 0.058, data_time: 0.008, memory: 874, loss: 0.3310
+2023-02-04 21:19:01,593 - mmcls - INFO - Epoch [9][58/72]	lr: 1.000e-04, eta: 0:00:09, time: 0.120, data_time: 0.004, memory: 874, loss: 0.2910
+2023-02-04 21:19:01,719 - mmcls - INFO - Epoch [9][60/72]	lr: 1.000e-04, eta: 0:00:09, time: 0.070, data_time: 0.016, memory: 874, loss: 0.5810
+2023-02-04 21:19:01,915 - mmcls - INFO - Epoch [9][62/72]	lr: 1.000e-04, eta: 0:00:09, time: 0.099, data_time: 0.009, memory: 874, loss: 0.2298
+2023-02-04 21:19:02,026 - mmcls - INFO - Epoch [9][64/72]	lr: 1.000e-04, eta: 0:00:09, time: 0.050, data_time: 0.007, memory: 874, loss: 0.3214
+2023-02-04 21:19:02,144 - mmcls - INFO - Epoch [9][66/72]	lr: 1.000e-04, eta: 0:00:08, time: 0.060, data_time: 0.012, memory: 874, loss: 0.2541
+2023-02-04 21:19:02,267 - mmcls - INFO - Epoch [9][68/72]	lr: 1.000e-04, eta: 0:00:08, time: 0.060, data_time: 0.011, memory: 874, loss: 0.3030
+2023-02-04 21:19:02,406 - mmcls - INFO - Epoch [9][70/72]	lr: 1.000e-04, eta: 0:00:08, time: 0.073, data_time: 0.021, memory: 874, loss: 0.3203
+2023-02-04 21:19:02,497 - mmcls - INFO - Epoch [9][72/72]	lr: 1.000e-04, eta: 0:00:08, time: 0.054, data_time: 0.013, memory: 874, loss: 0.2656
+2023-02-04 21:19:02,498 - mmcls - INFO - Saving checkpoint at 9 epochs
+2023-02-04 21:19:04,419 - mmcls - INFO - Epoch(val) [9][18]	accuracy_top-1: 94.9301
+2023-02-04 21:19:06,811 - mmcls - INFO - Epoch [10][2/72]	lr: 1.000e-04, eta: 0:00:08, time: 1.179, data_time: 1.124, memory: 874, loss: 0.4028
+2023-02-04 21:19:06,913 - mmcls - INFO - Epoch [10][4/72]	lr: 1.000e-04, eta: 0:00:07, time: 0.051, data_time: 0.015, memory: 874, loss: 0.2905
+2023-02-04 21:19:07,039 - mmcls - INFO - Epoch [10][6/72]	lr: 1.000e-04, eta: 0:00:07, time: 0.065, data_time: 0.015, memory: 874, loss: 0.2343
+2023-02-04 21:19:07,143 - mmcls - INFO - Epoch [10][8/72]	lr: 1.000e-04, eta: 0:00:07, time: 0.052, data_time: 0.012, memory: 874, loss: 0.2185
+2023-02-04 21:19:07,287 - mmcls - INFO - Epoch [10][10/72]	lr: 1.000e-04, eta: 0:00:07, time: 0.071, data_time: 0.026, memory: 874, loss: 0.3920
+2023-02-04 21:19:07,425 - mmcls - INFO - Epoch [10][12/72]	lr: 1.000e-04, eta: 0:00:07, time: 0.075, data_time: 0.017, memory: 874, loss: 0.4087
+2023-02-04 21:19:07,554 - mmcls - INFO - Epoch [10][14/72]	lr: 1.000e-04, eta: 0:00:06, time: 0.062, data_time: 0.007, memory: 874, loss: 0.3657
+2023-02-04 21:19:07,690 - mmcls - INFO - Epoch [10][16/72]	lr: 1.000e-04, eta: 0:00:06, time: 0.065, data_time: 0.011, memory: 874, loss: 0.2807
+2023-02-04 21:19:07,810 - mmcls - INFO - Epoch [10][18/72]	lr: 1.000e-04, eta: 0:00:06, time: 0.060, data_time: 0.012, memory: 874, loss: 0.2647
+2023-02-04 21:19:07,924 - mmcls - INFO - Epoch [10][20/72]	lr: 1.000e-04, eta: 0:00:06, time: 0.056, data_time: 0.011, memory: 874, loss: 0.2773
+2023-02-04 21:19:08,038 - mmcls - INFO - Epoch [10][22/72]	lr: 1.000e-04, eta: 0:00:05, time: 0.056, data_time: 0.012, memory: 874, loss: 0.2527
+2023-02-04 21:19:08,167 - mmcls - INFO - Epoch [10][24/72]	lr: 1.000e-04, eta: 0:00:05, time: 0.075, data_time: 0.013, memory: 874, loss: 0.2809
+2023-02-04 21:19:08,315 - mmcls - INFO - Epoch [10][26/72]	lr: 1.000e-04, eta: 0:00:05, time: 0.072, data_time: 0.004, memory: 874, loss: 0.3603
+2023-02-04 21:19:08,517 - mmcls - INFO - Epoch [10][28/72]	lr: 1.000e-04, eta: 0:00:05, time: 0.098, data_time: 0.006, memory: 874, loss: 0.2162
+2023-02-04 21:19:08,649 - mmcls - INFO - Epoch [10][30/72]	lr: 1.000e-04, eta: 0:00:04, time: 0.070, data_time: 0.009, memory: 874, loss: 0.2644
+2023-02-04 21:19:08,750 - mmcls - INFO - Epoch [10][32/72]	lr: 1.000e-04, eta: 0:00:04, time: 0.043, data_time: 0.005, memory: 874, loss: 0.2442
+2023-02-04 21:19:08,848 - mmcls - INFO - Epoch [10][34/72]	lr: 1.000e-04, eta: 0:00:04, time: 0.053, data_time: 0.011, memory: 874, loss: 0.2885
+2023-02-04 21:19:08,988 - mmcls - INFO - Epoch [10][36/72]	lr: 1.000e-04, eta: 0:00:04, time: 0.070, data_time: 0.031, memory: 874, loss: 0.3438
+2023-02-04 21:19:09,193 - mmcls - INFO - Epoch [10][38/72]	lr: 1.000e-04, eta: 0:00:03, time: 0.093, data_time: 0.053, memory: 874, loss: 0.2932
+2023-02-04 21:19:09,343 - mmcls - INFO - Epoch [10][40/72]	lr: 1.000e-04, eta: 0:00:03, time: 0.085, data_time: 0.022, memory: 874, loss: 0.3384
+2023-02-04 21:19:09,478 - mmcls - INFO - Epoch [10][42/72]	lr: 1.000e-04, eta: 0:00:03, time: 0.069, data_time: 0.007, memory: 874, loss: 0.4096
+2023-02-04 21:19:09,591 - mmcls - INFO - Epoch [10][44/72]	lr: 1.000e-04, eta: 0:00:03, time: 0.048, data_time: 0.006, memory: 874, loss: 0.3458
+2023-02-04 21:19:09,707 - mmcls - INFO - Epoch [10][46/72]	lr: 1.000e-04, eta: 0:00:02, time: 0.062, data_time: 0.013, memory: 874, loss: 0.2415
+2023-02-04 21:19:09,828 - mmcls - INFO - Epoch [10][48/72]	lr: 1.000e-04, eta: 0:00:02, time: 0.059, data_time: 0.010, memory: 874, loss: 0.2489
+2023-02-04 21:19:09,950 - mmcls - INFO - Epoch [10][50/72]	lr: 1.000e-04, eta: 0:00:02, time: 0.060, data_time: 0.011, memory: 874, loss: 0.3305
+2023-02-04 21:19:10,111 - mmcls - INFO - Epoch [10][52/72]	lr: 1.000e-04, eta: 0:00:02, time: 0.090, data_time: 0.012, memory: 874, loss: 0.2248
+2023-02-04 21:19:10,243 - mmcls - INFO - Epoch [10][54/72]	lr: 1.000e-04, eta: 0:00:02, time: 0.054, data_time: 0.002, memory: 874, loss: 0.2443
+2023-02-04 21:19:10,355 - mmcls - INFO - Epoch [10][56/72]	lr: 1.000e-04, eta: 0:00:01, time: 0.059, data_time: 0.014, memory: 874, loss: 0.3042
+2023-02-04 21:19:10,471 - mmcls - INFO - Epoch [10][58/72]	lr: 1.000e-04, eta: 0:00:01, time: 0.056, data_time: 0.011, memory: 874, loss: 0.3677
+2023-02-04 21:19:10,597 - mmcls - INFO - Epoch [10][60/72]	lr: 1.000e-04, eta: 0:00:01, time: 0.064, data_time: 0.013, memory: 874, loss: 0.2974
+2023-02-04 21:19:10,728 - mmcls - INFO - Epoch [10][62/72]	lr: 1.000e-04, eta: 0:00:01, time: 0.072, data_time: 0.013, memory: 874, loss: 0.2208
+2023-02-04 21:19:10,870 - mmcls - INFO - Epoch [10][64/72]	lr: 1.000e-04, eta: 0:00:00, time: 0.061, data_time: 0.006, memory: 874, loss: 0.2122
+2023-02-04 21:19:10,990 - mmcls - INFO - Epoch [10][66/72]	lr: 1.000e-04, eta: 0:00:00, time: 0.066, data_time: 0.019, memory: 874, loss: 0.2165
+2023-02-04 21:19:11,108 - mmcls - INFO - Epoch [10][68/72]	lr: 1.000e-04, eta: 0:00:00, time: 0.056, data_time: 0.015, memory: 874, loss: 0.2575
+2023-02-04 21:19:11,217 - mmcls - INFO - Epoch [10][70/72]	lr: 1.000e-04, eta: 0:00:00, time: 0.058, data_time: 0.015, memory: 874, loss: 0.3664
+2023-02-04 21:19:11,303 - mmcls - INFO - Epoch [10][72/72]	lr: 1.000e-04, eta: 0:00:00, time: 0.052, data_time: 0.011, memory: 874, loss: 0.2260
+2023-02-04 21:19:11,304 - mmcls - INFO - Saving checkpoint at 10 epochs
+2023-02-04 21:19:13,186 - mmcls - INFO - Epoch(val) [10][18]	accuracy_top-1: 94.7552
